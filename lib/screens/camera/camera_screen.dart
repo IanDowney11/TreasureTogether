@@ -155,13 +155,29 @@ class _CameraScreenState extends State<CameraScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     const Text(
-                      'Photo Sharing',
+                      'TreasureTogether',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
+                    FutureBuilder<PackageInfo>(
+                      future: PackageInfo.fromPlatform(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        final info = snapshot.data!;
+                        return Text(
+                          'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       authService.currentUser?.displayName ??
                           authService.currentUser?.email ??
@@ -226,43 +242,6 @@ class _CameraScreenState extends State<CameraScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<AuthService>().signOut();
-                    },
-                  ),
-                  const Divider(),
-                  // Version info
-                  FutureBuilder<PackageInfo>(
-                    future: PackageInfo.fromPlatform(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox.shrink();
-                      final info = snapshot.data!;
-                      return Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'TreasureTogether',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Version ${info.version} (${info.buildNumber})',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Colors.grey,
-                              ),
-                            ),
-                            if (kIsWeb)
-                              Text(
-                                'Web App (PWA)',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Colors.grey,
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
                     },
                   ),
                 ],

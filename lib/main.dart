@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,6 +18,13 @@ void main() async {
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+      // Use treasuretogether.com for redirect instead of localhost
+      redirectUrl: kIsWeb
+          ? null  // Let it use current URL on web
+          : 'com.treasuretogether.app://callback',
+    ),
   );
 
   runApp(const PhotoSharingApp());

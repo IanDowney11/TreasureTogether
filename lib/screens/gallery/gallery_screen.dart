@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -36,6 +37,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
       appBar: AppBar(
         title: Text(widget.group.name),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showGroupInfo,
+            tooltip: 'Share invite code',
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'info') {
@@ -150,21 +156,47 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
           return RefreshIndicator(
             onRefresh: () => photoService.fetchGroupPhotos(widget.group.id),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(4),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-              ),
-              itemCount: photos.length,
-              itemBuilder: (context, index) {
-                final photo = photos[index];
-                return _PhotoThumbnail(
-                  photo: photo,
-                  onTap: () => _showPhotoViewer(photos, index),
-                );
-              },
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.blue.shade50,
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.blue.shade700),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tap any photo to view, edit caption, or delete',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(4),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 4,
+                      mainAxisSpacing: 4,
+                    ),
+                    itemCount: photos.length,
+                    itemBuilder: (context, index) {
+                      final photo = photos[index];
+                      return _PhotoThumbnail(
+                        photo: photo,
+                        onTap: () => _showPhotoViewer(photos, index),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -350,15 +382,43 @@ class _GalleryScreenState extends State<GalleryScreen> {
             ],
             const Text('Invite Code:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            SelectableText(
-              widget.group.inviteCode,
-              style: const TextStyle(
-                fontSize: 18,
-                letterSpacing: 2,
-                fontWeight: FontWeight.w500,
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.group.inviteCode,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: widget.group.inviteCode),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Invite code copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    tooltip: 'Copy code',
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             const Text(
               'Share this code with others to invite them',
               style: TextStyle(fontSize: 12, color: Colors.grey),
