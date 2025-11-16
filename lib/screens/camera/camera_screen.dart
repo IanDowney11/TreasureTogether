@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/auth_service.dart';
 import '../../services/group_service.dart';
 import '../../services/photo_service.dart';
@@ -224,6 +225,43 @@ class _CameraScreenState extends State<CameraScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       context.read<AuthService>().signOut();
+                    },
+                  ),
+                  const Divider(),
+                  // Version info
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox.shrink();
+                      final info = snapshot.data!;
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'TreasureTogether',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Version ${info.version} (${info.buildNumber})',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Colors.grey,
+                              ),
+                            ),
+                            if (kIsWeb)
+                              Text(
+                                'Web App (PWA)',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ],
