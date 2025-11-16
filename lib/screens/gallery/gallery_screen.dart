@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/group.dart';
 import '../../models/photo.dart';
+import '../../services/auth_service.dart';
 import '../../services/photo_service.dart';
 import '../../services/group_service.dart';
 import '../../services/preferences_service.dart';
@@ -168,7 +169,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Tap any photo to view, edit caption, or delete',
+                          'Tap any photo to view • Edit or delete your own photos',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue.shade700,
@@ -644,6 +645,9 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
   Widget build(BuildContext context) {
     final photo = widget.photos[_currentIndex];
     final photoService = context.read<PhotoService>();
+    final authService = context.read<AuthService>();
+    final currentUserId = authService.currentUser?.id;
+    final isOwner = currentUserId != null && photo.uploadedBy == currentUserId;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -651,16 +655,18 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
         backgroundColor: Colors.black,
         title: Text('${_currentIndex + 1} / ${widget.photos.length}'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _editCaption(context, photo),
-            tooltip: 'Edit caption',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () => _deletePhoto(context, photo),
-            tooltip: 'Delete photo',
-          ),
+          if (isOwner) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _editCaption(context, photo),
+              tooltip: 'Edit caption',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _deletePhoto(context, photo),
+              tooltip: 'Delete photo',
+            ),
+          ],
         ],
       ),
       body: PageView.builder(
@@ -773,9 +779,9 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Photo'),
+        title: const Text('Delete Photo?'),
         content: const Text(
-          'Are you sure you want to delete this photo? This action cannot be undone.',
+          'This photo will be permanently deleted and cannot be recovered. Do you want to continue?',
         ),
         actions: [
           TextButton(
@@ -787,19 +793,40 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
               final photoService = context.read<PhotoService>();
               final navigator = Navigator.of(context);
 
-              navigator.pop(); // Close dialog
+              // Close confirmation dialog
+              navigator.pop();
+
+              // Show deleting progress
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 20),
+                      Text('Deleting photo...'),
+                    ],
+                  ),
+                ),
+              );
 
               final success = await photoService.deletePhoto(photo.id);
 
               if (context.mounted) {
+                // Close progress dialog
+                Navigator.of(context).pop();
+
                 if (success) {
-                  // Go back to gallery
+                  // Return to gallery view
                   Navigator.of(context).pop();
 
+                  // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Photo deleted successfully!'),
+                      content: Text('Photo deleted successfully'),
                       backgroundColor: Colors.green,
+                      duration: Duration(seconds: 2),
                     ),
                   );
                 } else {
@@ -809,6 +836,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
                         photoService.error ?? 'Failed to delete photo',
                       ),
                       backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
                     ),
                   );
                 }
@@ -818,7 +846,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Delete'),
+            child: const Text('Delete Permanently'),
           ),
         ],
       ),
