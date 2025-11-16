@@ -1,0 +1,16 @@
+# Vercel ignore file
+android/
+ios/
+windows/
+linux/
+macos/
+test/
+.dart_tool/
+.git/
+.idea/
+.vscode/
+*.log
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
