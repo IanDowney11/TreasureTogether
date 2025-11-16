@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -41,10 +43,26 @@ class _AuthScreenState extends State<AuthScreen> {
                     size: 80,
                     color: Theme.of(context).primaryColor,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   Text(
-                    'Photo Sharing',
-                    style: Theme.of(context).textTheme.headlineMedium,
+                    'TreasureTogether',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const SizedBox.shrink();
+                      final info = snapshot.data!;
+                      return Text(
+                        'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                   if (_isSignUp)
