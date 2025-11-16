@@ -52,16 +52,25 @@ class _AuthScreenState extends State<AuthScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   FutureBuilder<PackageInfo>(
                     future: PackageInfo.fromPlatform(),
                     builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const SizedBox.shrink();
+                      if (!snapshot.hasData) {
+                        return Text(
+                          'v1.1.3 (5) • Web',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        );
+                      }
                       final info = snapshot.data!;
                       return Text(
                         'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                          fontSize: 14,
                         ),
                       );
                     },
