@@ -13,7 +13,13 @@
       "Bash(\"/c/Development/flutter/bin/flutter\" create --platforms=web,windows .)",
       "Bash(\"/c/Development/flutter/bin/flutter\" create --platforms=android,ios .)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: TreasureTogether - Complete photo sharing app\n\nTreasureTogether is a mobile-first photo sharing application built with Flutter \nand Supabase, designed for seamless photo sharing during trips and events.\n\nFeatures implemented:\n- Camera-first UX with direct photo capture and auto-save to device\n- Event/group management with invite code system\n- Photo upload, download, and gallery view\n- Photo management: delete photos, edit captions\n- Group features: view members, leave events\n- Real-time sync with Supabase backend\n- Comprehensive error handling and loading states\n- Polished UI/UX with Material 3 design\n- Multi-platform support: Web, Windows, Android, iOS\n\nTech stack:\n- Flutter 3.8.0+ with Material 3\n- Supabase (PostgreSQL + Storage + Auth)\n- Provider for state management\n- Image handling: image_picker, cached_network_image\n- Local storage: shared_preferences\n\nArchitecture:\n- Service layer for business logic (AuthService, GroupService, PhotoService)\n- Model classes with JSON serialization\n- Provider-based state management\n- Row-level security policies in Supabase\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(gh --version:*)",
+      "Bash(gh auth:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,13 +1,15 @@
 {
-    "name": "photo_sharing",
-    "short_name": "photo_sharing",
-    "start_url": ".",
+    "name": "TreasureTogether - Photo Sharing for Trips & Events",
+    "short_name": "TreasureTogether",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#2196F3",
+    "theme_color": "#2196F3",
+    "description": "Share photos seamlessly during trips and events with friends and family. Create events, upload photos, and build shared memories together.",
+    "orientation": "any",
     "prefer_related_applications": false,
+    "scope": "/",
+    "categories": ["photo", "social", "travel"],
     "icons": [
         {
             "src": "icons/Icon-192.png",

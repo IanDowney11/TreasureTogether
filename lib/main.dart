@@ -36,7 +36,7 @@ class PhotoSharingApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SyncService()),
       ],
       child: MaterialApp(
-        title: 'Photo Sharing',
+        title: 'TreasureTogether',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
