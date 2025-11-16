@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../services/auth_service.dart';
 import '../../services/group_service.dart';
 import '../../services/photo_service.dart';
@@ -275,6 +276,22 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _takePhoto() async {
     try {
+      // Request storage permission on Android before saving
+      if (!kIsWeb) {
+        final status = await Permission.photos.request();
+        if (!status.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo gallery permission is required to save photos'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          // Continue anyway - will upload but not save locally
+        }
+      }
+
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1920,
