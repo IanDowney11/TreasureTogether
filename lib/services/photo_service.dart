@@ -151,19 +151,33 @@ class PhotoService extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
+      print('Attempting to delete photo: $photoId');
+
+      // Add timeout to prevent hanging
       await _supabase
           .from('photos')
           .update({'is_deleted': true})
-          .eq('id', photoId);
+          .eq('id', photoId)
+          .select()
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Delete operation timed out');
+            },
+          );
+
+      print('Photo deleted successfully: $photoId');
 
       // Remove from local cache
       for (var groupPhotos in _photosByGroup.values) {
         groupPhotos.removeWhere((p) => p.id == photoId);
       }
 
+      notifyListeners();
       return true;
     } catch (e) {
-      _error = 'Failed to delete photo: $e';
+      print('Error deleting photo: $e');
+      _error = 'Failed to delete photo: ${e.toString()}';
       return false;
     } finally {
       _isLoading = false;
