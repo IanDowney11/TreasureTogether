@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter:*)",
+      "Bash(C:Developmentflutterbinflutter.bat doctor)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" doctor)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" pub run build_runner build --delete-conflicting-outputs)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" pub get)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" analyze)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" devices)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" run -d windows)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" run -d chrome)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" create --platforms=web,windows .)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" create --platforms=android,ios .)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
