@@ -21,6 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(_isSignUp ? 'Sign Up' : 'Sign In'),
         centerTitle: true,
@@ -31,13 +32,14 @@ class _AuthScreenState extends State<AuthScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return Padding(
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                   Icon(
                     Icons.camera_alt,
                     size: 80,
@@ -144,6 +146,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ? 'Already have an account? Sign In'
                         : "Don't have an account? Sign Up"),
                   ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
