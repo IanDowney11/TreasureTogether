@@ -19,7 +19,9 @@
       "Bash(gh auth:*)",
       "Bash(git remote add:*)",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" build web --release --web-renderer canvaskit)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" build web --release)"
     ],
     "deny": [],
     "ask": []

@@ -268,8 +268,22 @@ class _CameraScreenState extends State<CameraScreen> {
 
       // Save to device gallery
       final imageBytes = await image.readAsBytes();
+      bool savedToGallery = false;
       if (!kIsWeb) {
-        await ImageGallerySaver.saveImage(imageBytes);
+        try {
+          final result = await ImageGallerySaver.saveImage(
+            imageBytes,
+            quality: 100,
+            name: "treasure_together_${DateTime.now().millisecondsSinceEpoch}",
+          );
+          savedToGallery = result != null && result['isSuccess'] == true;
+          if (!savedToGallery) {
+            print('Failed to save to gallery: $result');
+          }
+        } catch (e) {
+          print('Error saving to gallery: $e');
+          savedToGallery = false;
+        }
       }
 
       // Upload to default event
@@ -288,14 +302,28 @@ class _CameraScreenState extends State<CameraScreen> {
           // Close progress dialog
           Navigator.of(context).pop();
 
+          String message;
+          Color backgroundColor;
+
+          if (photo != null && savedToGallery) {
+            message = 'Photo saved to gallery and uploaded!';
+            backgroundColor = Colors.green;
+          } else if (photo != null && !savedToGallery) {
+            message = 'Photo uploaded! (Gallery save failed - check permissions)';
+            backgroundColor = Colors.orange;
+          } else if (photo == null && savedToGallery) {
+            message = 'Photo saved to gallery, but upload failed';
+            backgroundColor = Colors.orange;
+          } else {
+            message = 'Failed to save and upload photo';
+            backgroundColor = Colors.red;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                photo != null
-                    ? 'Photo saved and uploaded!'
-                    : 'Photo saved, but upload failed',
-              ),
-              backgroundColor: photo != null ? Colors.green : Colors.orange,
+              content: Text(message),
+              backgroundColor: backgroundColor,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
