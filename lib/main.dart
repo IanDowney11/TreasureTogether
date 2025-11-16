@@ -20,10 +20,6 @@ void main() async {
     anonKey: SupabaseConfig.anonKey,
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
-      // Use treasuretogether.com for redirect instead of localhost
-      redirectUrl: kIsWeb
-          ? null  // Let it use current URL on web
-          : 'com.treasuretogether.app://callback',
     ),
   );
 
