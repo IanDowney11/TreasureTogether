@@ -30,7 +30,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Groups'),
+        title: const Text('Events'),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {

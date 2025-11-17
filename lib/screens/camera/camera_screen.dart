@@ -150,10 +150,10 @@ class _CameraScreenState extends State<CameraScreen> {
                           GestureDetector(
                             onTap: () => _viewGallery(context),
                             child: Container(
-                              width: 120,
-                              height: 120,
+                              width: 200,
+                              height: 200,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.2),
@@ -163,7 +163,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                 ],
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(16),
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -194,12 +194,12 @@ class _CameraScreenState extends State<CameraScreen> {
                                       ),
                                     ),
                                     const Positioned(
-                                      bottom: 8,
-                                      right: 8,
+                                      bottom: 12,
+                                      right: 12,
                                       child: Icon(
                                         Icons.photo_library,
                                         color: Colors.white,
-                                        size: 20,
+                                        size: 28,
                                       ),
                                     ),
                                   ],

@@ -666,36 +666,100 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: Text('${_currentIndex + 1} / ${widget.photos.length}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () => _downloadPhoto(context, photo),
-            tooltip: 'Download photo',
-          ),
-          IconButton(
-            icon: Icon(
-              _favoritesCache[photo.id] == true
-                  ? Icons.favorite
-                  : Icons.favorite_border,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withOpacity(0.7),
+                Colors.black.withOpacity(0.0),
+              ],
             ),
-            color: _favoritesCache[photo.id] == true ? Colors.red : null,
-            onPressed: () => _toggleFavorite(photo),
-            tooltip: _favoritesCache[photo.id] == true
-                ? 'Remove from favorites'
-                : 'Add to favorites',
+          ),
+        ),
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+          shadows: [
+            Shadow(
+              offset: Offset(0, 1),
+              blurRadius: 3.0,
+              color: Colors.black,
+            ),
+          ],
+        ),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.photos.length}',
+          style: const TextStyle(
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                offset: Offset(0, 1),
+                blurRadius: 3.0,
+                color: Colors.black,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.download),
+              onPressed: () => _downloadPhoto(context, photo),
+              tooltip: 'Download photo',
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                _favoritesCache[photo.id] == true
+                    ? Icons.favorite
+                    : Icons.favorite_border,
+              ),
+              color: _favoritesCache[photo.id] == true ? Colors.red : Colors.white,
+              onPressed: () => _toggleFavorite(photo),
+              tooltip: _favoritesCache[photo.id] == true
+                  ? 'Remove from favorites'
+                  : 'Add to favorites',
+            ),
           ),
           if (isOwner) ...[
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _editCaption(context, photo),
-              tooltip: 'Edit caption',
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _editCaption(context, photo),
+                tooltip: 'Edit caption',
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _deletePhoto(context, photo),
-              tooltip: 'Delete photo',
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () => _deletePhoto(context, photo),
+                tooltip: 'Delete photo',
+              ),
             ),
           ],
         ],
