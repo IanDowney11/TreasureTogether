@@ -169,7 +169,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         // Always show version, even if PackageInfo fails
                         final version = snapshot.hasData
                             ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                            : 'v1.1.5 (7) • Web';
+                            : 'v1.1.6 (8) • Web';
                         return Text(
                           version,
                           style: const TextStyle(
@@ -258,19 +258,25 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _takePhoto() async {
     try {
-      // Request storage permission on Android before saving
+      // Request storage permission on Android before saving (only needed for Android 9 and below)
+      // On Android 10+ (API 29+), MediaStore doesn't require runtime permissions
       if (!kIsWeb) {
-        final status = await Permission.photos.request();
-        if (!status.isGranted) {
+        // Try to request storage permission
+        // On Android 10+ this will be granted automatically or not needed
+        // On Android 9 and below, this prompts for WRITE_EXTERNAL_STORAGE
+        final status = await Permission.storage.request();
+        if (!status.isGranted && !status.isLimited) {
+          // Permission denied - but we'll continue anyway
+          // The photo will still be uploaded to the cloud
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Photo gallery permission is required to save photos'),
-                backgroundColor: Colors.red,
+                content: Text('Storage permission denied - photo will be uploaded but not saved to device'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 4),
               ),
             );
           }
-          // Continue anyway - will upload but not save locally
         }
       }
 
