@@ -386,6 +386,10 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+    final currentUserId = authService.currentUser?.id;
+    final isCreator = currentUserId == group.createdBy;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: ListTile(
@@ -400,7 +404,40 @@ class _GroupCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               )
             : null,
-        trailing: Icon(selectMode ? Icons.check_circle_outline : Icons.chevron_right),
+        trailing: selectMode
+            ? const Icon(Icons.check_circle_outline)
+            : PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'view_code') {
+                    _showInviteCodeDialog(context, group);
+                  } else if (value == 'delete') {
+                    _showDeleteConfirmation(context, group);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'view_code',
+                    child: Row(
+                      children: [
+                        Icon(Icons.qr_code, size: 20),
+                        SizedBox(width: 12),
+                        Text('View Invite Code'),
+                      ],
+                    ),
+                  ),
+                  if (isCreator)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red, size: 20),
+                          SizedBox(width: 12),
+                          Text('Delete Event', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
         onTap: () async {
           if (selectMode) {
             // Set as default event and go back
@@ -425,6 +462,107 @@ class _GroupCard extends StatelessWidget {
             );
           }
         },
+      ),
+    );
+  }
+
+  void _showInviteCodeDialog(BuildContext context, Group group) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Invite Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Share this code to invite others to "${group.name}":'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    group.inviteCode,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy),
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: group.inviteCode),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Invite code copied!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Group group) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event?'),
+        content: Text(
+          'Are you sure you want to delete "${group.name}"? This will permanently delete all photos and data associated with this event. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              final messenger = ScaffoldMessenger.of(context);
+              final groupService = context.read<GroupService>();
+
+              final success = await groupService.deleteGroup(group.id);
+
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? 'Event "${group.name}" deleted successfully'
+                        : groupService.error ?? 'Failed to delete event',
+                  ),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

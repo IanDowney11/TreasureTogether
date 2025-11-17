@@ -228,6 +228,104 @@ class PhotoService extends ChangeNotifier {
     }
   }
 
+  /// Add photo to favorites
+  Future<bool> addToFavorites(String photoId) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _supabase.from('photo_favorites').insert({
+        'user_id': userId,
+        'photo_id': photoId,
+      });
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Failed to add to favorites: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Remove photo from favorites
+  Future<bool> removeFromFavorites(String photoId) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _supabase
+          .from('photo_favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('photo_id', photoId);
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Failed to remove from favorites: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Check if photo is favorited by current user
+  Future<bool> isFavorited(String photoId) async {
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final result = await _supabase
+          .from('photo_favorites')
+          .select()
+          .eq('user_id', userId)
+          .eq('photo_id', photoId)
+          .maybeSingle();
+
+      return result != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Fetch all favorited photos for the current user
+  Future<List<Photo>> fetchFavoritePhotos() async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final response = await _supabase
+          .from('photo_favorites')
+          .select('photo_id, photos(*)')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      final photos = (response as List)
+          .where((item) => item['photos'] != null)
+          .map((item) => Photo.fromJson(item['photos']))
+          .where((photo) => !photo.isDeleted)
+          .toList();
+
+      return photos;
+    } catch (e) {
+      _error = 'Failed to fetch favorite photos: $e';
+      return [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

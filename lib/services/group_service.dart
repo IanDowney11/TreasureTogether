@@ -289,6 +289,49 @@ class GroupService extends ChangeNotifier {
     }
   }
 
+  /// Delete a group (only creator can delete)
+  Future<bool> deleteGroup(String groupId) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      final userId = _supabase.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Check if user is the creator
+      final groupData = await _supabase
+          .from('groups')
+          .select('created_by')
+          .eq('id', groupId)
+          .single();
+
+      if (groupData['created_by'] != userId) {
+        _error = 'Only the creator can delete this group';
+        return false;
+      }
+
+      // Delete the group (cascade will handle group_members and photos)
+      await _supabase
+          .from('groups')
+          .delete()
+          .eq('id', groupId);
+
+      // Refresh groups list
+      await fetchUserGroups();
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to delete group: $e';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

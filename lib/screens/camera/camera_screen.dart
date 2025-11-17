@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:gal/gal.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/auth_service.dart';
 import '../../services/group_service.dart';
 import '../../services/photo_service.dart';
@@ -12,6 +13,7 @@ import '../../services/preferences_service.dart';
 import '../../models/group.dart';
 import '../groups/groups_screen.dart';
 import '../gallery/gallery_screen.dart';
+import '../favorites/favorites_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -23,6 +25,26 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
+  bool _hasAutoLaunched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch photos when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final prefs = context.read<PreferencesService>();
+      final photoService = context.read<PhotoService>();
+      if (prefs.defaultEventId != null) {
+        photoService.fetchGroupPhotos(prefs.defaultEventId!);
+
+        // Auto-launch camera on mobile only once
+        if (!kIsWeb && !_hasAutoLaunched && prefs.defaultEventId != null) {
+          _hasAutoLaunched = true;
+          _takePhoto();
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +68,18 @@ class _CameraScreenState extends State<CameraScreen> {
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            tooltip: 'Favorites',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FavoritesScreen(),
+                ),
+              );
+            },
+          ),
           Consumer<PreferencesService>(
             builder: (context, prefs, _) {
               if (prefs.defaultEventId != null) {
@@ -105,31 +139,110 @@ class _CameraScreenState extends State<CameraScreen> {
                   );
                 }
 
-                return Column(
-                  children: [
-                    Icon(
-                      Icons.camera_alt_outlined,
-                      size: 120,
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: _isUploading ? null : _takePhoto,
-                      icon: const Icon(Icons.camera),
-                      label: Text(_isUploading ? 'Uploading...' : 'Take Photo'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
+                return Consumer<PhotoService>(
+                  builder: (context, photoService, _) {
+                    final photos = photoService.getPhotosForGroup(prefs.defaultEventId!);
+                    final lastPhoto = photos.isNotEmpty ? photos.first : null;
+
+                    return Column(
+                      children: [
+                        if (lastPhoto != null) ...[
+                          GestureDetector(
+                            onTap: () => _viewGallery(context),
+                            child: Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CachedNetworkImage(
+                                      imageUrl: photoService.getPhotoUrl(lastPhoto),
+                                      fit: BoxFit.cover,
+                                      placeholder: (context, url) => Container(
+                                        color: Colors.grey[300],
+                                        child: const Center(
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                      errorWidget: (context, url, error) => Container(
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.error),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withOpacity(0.3),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const Positioned(
+                                      bottom: 8,
+                                      right: 8,
+                                      child: Icon(
+                                        Icons.photo_library,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Tap to view gallery',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ] else ...[
+                          Icon(
+                            Icons.camera_alt_outlined,
+                            size: 120,
+                            color: Theme.of(context).primaryColor.withOpacity(0.3),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                        ElevatedButton.icon(
+                          onPressed: _isUploading ? null : _takePhoto,
+                          icon: const Icon(Icons.camera),
+                          label: Text(_isUploading ? 'Uploading...' : 'Take Photo'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (_isUploading)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 16),
-                        child: CircularProgressIndicator(),
-                      ),
-                  ],
+                        if (_isUploading)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16),
+                            child: CircularProgressIndicator(),
+                          ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
@@ -543,6 +656,7 @@ class _CameraScreenState extends State<CameraScreen> {
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
                 final groupService = context.read<GroupService>();
                 final prefsService = context.read<PreferencesService>();
 
@@ -552,7 +666,7 @@ class _CameraScreenState extends State<CameraScreen> {
                   codeController.text.trim().toUpperCase(),
                 );
 
-                if (success && context.mounted) {
+                if (success) {
                   // Set as default event
                   await groupService.fetchUserGroups();
                   final joinedGroup = groupService.groups.firstOrNull;
@@ -560,14 +674,23 @@ class _CameraScreenState extends State<CameraScreen> {
                     await prefsService.setDefaultEvent(joinedGroup.id);
                   }
 
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Successfully joined event!'),
-                        backgroundColor: Colors.green,
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Successfully joined event!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  // Show error message
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        groupService.error ?? 'Failed to join event',
                       ),
-                    );
-                  }
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
                 }
               }
             },

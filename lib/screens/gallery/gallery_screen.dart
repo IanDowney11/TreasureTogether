@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart' as http;
+import 'package:gal/gal.dart';
 import '../../models/group.dart';
 import '../../models/photo.dart';
 import '../../services/auth_service.dart';
@@ -358,7 +360,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => _PhotoViewerScreen(
+        builder: (context) => PhotoViewerScreen(
           photos: photos,
           initialIndex: initialIndex,
         ),
@@ -611,28 +613,40 @@ class _PhotoThumbnail extends StatelessWidget {
   }
 }
 
-class _PhotoViewerScreen extends StatefulWidget {
+class PhotoViewerScreen extends StatefulWidget {
   final List<Photo> photos;
   final int initialIndex;
 
-  const _PhotoViewerScreen({
+  const PhotoViewerScreen({
+    super.key,
     required this.photos,
     required this.initialIndex,
   });
 
   @override
-  State<_PhotoViewerScreen> createState() => _PhotoViewerScreenState();
+  State<PhotoViewerScreen> createState() => _PhotoViewerScreenState();
 }
 
-class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
+class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
   late PageController _pageController;
   late int _currentIndex;
+  Map<String, bool> _favoritesCache = {};
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+    _loadFavoriteStatus();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    final photoService = context.read<PhotoService>();
+    for (var photo in widget.photos) {
+      final isFav = await photoService.isFavorited(photo.id);
+      _favoritesCache[photo.id] = isFav;
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -655,6 +669,23 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
         backgroundColor: Colors.black,
         title: Text('${_currentIndex + 1} / ${widget.photos.length}'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () => _downloadPhoto(context, photo),
+            tooltip: 'Download photo',
+          ),
+          IconButton(
+            icon: Icon(
+              _favoritesCache[photo.id] == true
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+            ),
+            color: _favoritesCache[photo.id] == true ? Colors.red : null,
+            onPressed: () => _toggleFavorite(photo),
+            tooltip: _favoritesCache[photo.id] == true
+                ? 'Remove from favorites'
+                : 'Add to favorites',
+          ),
           if (isOwner) ...[
             IconButton(
               icon: const Icon(Icons.edit),
@@ -773,6 +804,107 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _toggleFavorite(Photo photo) async {
+    final photoService = context.read<PhotoService>();
+    final isFavorited = _favoritesCache[photo.id] == true;
+
+    bool success;
+    if (isFavorited) {
+      success = await photoService.removeFromFavorites(photo.id);
+    } else {
+      success = await photoService.addToFavorites(photo.id);
+    }
+
+    if (success) {
+      setState(() {
+        _favoritesCache[photo.id] = !isFavorited;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isFavorited
+                  ? 'Removed from favorites'
+                  : 'Added to favorites',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            photoService.error ?? 'Failed to update favorites',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _downloadPhoto(BuildContext context, Photo photo) async {
+    try {
+      final photoService = context.read<PhotoService>();
+      final url = photoService.getPhotoUrl(photo);
+
+      if (kIsWeb) {
+        // For web, copy URL to clipboard (dart:html causes build issues on mobile)
+        await Clipboard.setData(ClipboardData(text: url));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo URL copied! Open in new tab to download.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } else {
+        // For mobile, download and save to gallery
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloading...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          await Gal.putImageBytes(response.bodyBytes);
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Photo saved to gallery!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to download photo'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error downloading photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _deletePhoto(BuildContext context, Photo photo) {

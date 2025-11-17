@@ -113,7 +113,16 @@ class AuthService extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = e.toString();
+      // Check if it's an invalid credentials error
+      final errorMessage = e.toString().toLowerCase();
+      if (errorMessage.contains('invalid') ||
+          errorMessage.contains('credentials') ||
+          errorMessage.contains('wrong') ||
+          errorMessage.contains('incorrect')) {
+        _error = "Doh!  That's not it.  Sure you have an account brah???";
+      } else {
+        _error = e.toString();
+      }
       return false;
     } finally {
       _isLoading = false;
@@ -130,6 +139,27 @@ class AuthService extends ChangeNotifier {
       _error = e.toString();
     }
     notifyListeners();
+  }
+
+  Future<bool> resetPassword(String email) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'treasuretogether://reset-password',
+      );
+
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void clearError() {

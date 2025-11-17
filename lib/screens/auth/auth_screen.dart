@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/auth_service.dart';
@@ -148,6 +149,11 @@ class _AuthScreenState extends State<AuthScreen> {
                             child: Text(_isSignUp ? 'Sign Up' : 'Sign In'),
                           ),
                         ),
+                        if (!_isSignUp)
+                          TextButton(
+                            onPressed: () => _showForgotPasswordDialog(context),
+                            child: const Text('Forgot Password?'),
+                          ),
                         const SizedBox(height: 16),
                         TextButton(
                           onPressed: () {
@@ -159,6 +165,40 @@ class _AuthScreenState extends State<AuthScreen> {
                           child: Text(_isSignUp
                               ? 'Already have an account? Sign In'
                               : "Don't have an account? Sign Up"),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.android, color: Colors.green.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  final url = 'https://github.com/IanDowney11/TreasureTogether/releases/latest';
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Download APK from: $url'),
+                                      duration: const Duration(seconds: 5),
+                                      action: SnackBarAction(
+                                        label: 'Copy',
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: url));
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Download Android App (APK)'),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 40),
                       ],
@@ -190,6 +230,83 @@ class _AuthScreenState extends State<AuthScreen> {
         password: _passwordController.text,
       );
     }
+  }
+
+  void _showForgotPasswordDialog(BuildContext context) {
+    final emailController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter your email address and we\'ll send you a link to reset your password.',
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your email';
+                  }
+                  if (!value.contains('@')) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
+                autofocus: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final authService = context.read<AuthService>();
+
+                navigator.pop();
+
+                final success = await authService.resetPassword(
+                  emailController.text.trim(),
+                );
+
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Password reset email sent! Check your inbox.'
+                          : authService.error ?? 'Failed to send reset email',
+                    ),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              }
+            },
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
