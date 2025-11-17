@@ -22,7 +22,8 @@
       "Bash(git commit:*)",
       "Bash(\"/c/Development/flutter/bin/flutter\" build web --release --web-renderer canvaskit)",
       "Bash(\"/c/Development/flutter/bin/flutter\" build web --release)",
-      "Bash(\"/c/Development/flutter/bin/dart\" format \"lib/screens/auth/auth_screen.dart\")"
+      "Bash(\"/c/Development/flutter/bin/dart\" format \"lib/screens/auth/auth_screen.dart\")",
+      "Bash(\"/c/Development/flutter/bin/flutter\" build apk --release)"
     ],
     "deny": [],
     "ask": []

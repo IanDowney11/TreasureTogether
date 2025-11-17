@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:gal/gal.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/auth_service.dart';
@@ -314,15 +314,8 @@ class _CameraScreenState extends State<CameraScreen> {
       bool savedToGallery = false;
       if (!kIsWeb) {
         try {
-          final result = await ImageGallerySaver.saveImage(
-            imageBytes,
-            quality: 100,
-            name: "treasure_together_${DateTime.now().millisecondsSinceEpoch}",
-          );
-          savedToGallery = result != null && result['isSuccess'] == true;
-          if (!savedToGallery) {
-            print('Failed to save to gallery: $result');
-          }
+          await Gal.putImageBytes(imageBytes);
+          savedToGallery = true;
         } catch (e) {
           print('Error saving to gallery: $e');
           savedToGallery = false;
