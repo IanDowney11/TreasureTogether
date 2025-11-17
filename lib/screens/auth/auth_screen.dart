@@ -58,7 +58,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return Text(
-                          'v1.1.3 (5) • Web',
+                          'v1.1.5 (7) • Web',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Colors.grey[600],
                             fontSize: 14,

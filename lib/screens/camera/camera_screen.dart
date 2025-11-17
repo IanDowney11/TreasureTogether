@@ -169,7 +169,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         // Always show version, even if PackageInfo fails
                         final version = snapshot.hasData
                             ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                            : 'v1.1.4 (6) • Web';
+                            : 'v1.1.5 (7) • Web';
                         return Text(
                           version,
                           style: const TextStyle(

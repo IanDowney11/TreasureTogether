@@ -776,31 +776,33 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
   }
 
   void _deletePhoto(BuildContext context, Photo photo) {
+    // Capture the outer navigator context before showing dialogs
+    final outerNavigator = Navigator.of(context);
+    final photoService = context.read<PhotoService>();
+    final messenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Photo?'),
         content: const Text(
           'This photo will be permanently deleted and cannot be recovered. Do you want to continue?',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              final photoService = context.read<PhotoService>();
-              final navigator = Navigator.of(context);
+              // Close confirmation dialog using dialog context
+              Navigator.of(dialogContext).pop();
 
-              // Close confirmation dialog
-              navigator.pop();
-
-              // Show deleting progress
+              // Show deleting progress using outer context
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) => const AlertDialog(
+                builder: (progressContext) => const AlertDialog(
                   content: Row(
                     children: [
                       CircularProgressIndicator(),
@@ -813,16 +815,17 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
 
               final success = await photoService.deletePhoto(photo.id);
 
+              // Use outer navigator to dismiss dialogs and navigate
               if (context.mounted) {
                 // Close progress dialog
-                Navigator.of(context).pop();
+                outerNavigator.pop();
 
                 if (success) {
                   // Return to gallery view
-                  Navigator.of(context).pop();
+                  outerNavigator.pop();
 
                   // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('Photo deleted successfully'),
                       backgroundColor: Colors.green,
@@ -830,7 +833,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text(
                         photoService.error ?? 'Failed to delete photo',
