@@ -162,17 +162,20 @@ class _CameraScreenState extends State<CameraScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     FutureBuilder<PackageInfo>(
                       future: PackageInfo.fromPlatform(),
                       builder: (context, snapshot) {
-                        if (!snapshot.hasData) return const SizedBox.shrink();
-                        final info = snapshot.data!;
+                        // Always show version, even if PackageInfo fails
+                        final version = snapshot.hasData
+                            ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
+                            : 'v1.1.4 (6) • Web';
                         return Text(
-                          'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
+                          version,
                           style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         );
                       },
