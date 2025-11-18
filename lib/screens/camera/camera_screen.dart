@@ -282,7 +282,7 @@ class _CameraScreenState extends State<CameraScreen> {
                         // Always show version, even if PackageInfo fails
                         final version = snapshot.hasData
                             ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                            : 'v1.1.6 (8) • Web';
+                            : 'v1.1.7 (9) • Web';
                         return Text(
                           version,
                           style: const TextStyle(
@@ -347,6 +347,19 @@ class _CameraScreenState extends State<CameraScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const GroupsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.favorite),
+                    title: const Text('Favorites'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FavoritesScreen(),
                         ),
                       );
                     },
