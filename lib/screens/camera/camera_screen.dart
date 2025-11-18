@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:gal/gal.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/auth_service.dart';
@@ -11,6 +10,7 @@ import '../../services/group_service.dart';
 import '../../services/photo_service.dart';
 import '../../services/preferences_service.dart';
 import '../../models/group.dart';
+import '../../version.dart';
 import '../groups/groups_screen.dart';
 import '../gallery/gallery_screen.dart';
 import '../favorites/favorites_screen.dart';
@@ -276,21 +276,13 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    FutureBuilder<PackageInfo>(
-                      future: PackageInfo.fromPlatform(),
-                      builder: (context, snapshot) {
-                        final version = snapshot.hasData
-                            ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                            : 'Loading...';
-                        return Text(
-                          version,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        );
-                      },
+                    Text(
+                      '${AppVersion.fullVersion}${kIsWeb ? ' • Web' : ''}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(

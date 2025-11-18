@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/auth_service.dart';
+import '../../version.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -76,20 +76,12 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          FutureBuilder<PackageInfo>(
-                            future: PackageInfo.fromPlatform(),
-                            builder: (context, snapshot) {
-                              final versionText = snapshot.hasData
-                                  ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                                  : 'Loading...';
-                              return Text(
-                                versionText,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 14,
-                                ),
-                              );
-                            },
+                          Text(
+                            '${AppVersion.fullVersion}${kIsWeb ? ' • Web' : ''}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
                           ),
                           const SizedBox(height: 40),
                           // Floating Card with Form
