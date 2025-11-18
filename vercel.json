@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Using pre-built files from build/web'",
+  "buildCommand": "echo 'Using pre-built Flutter web files'",
   "outputDirectory": "build/web",
   "framework": null,
   "rewrites": [
