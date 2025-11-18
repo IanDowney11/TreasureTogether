@@ -279,10 +279,9 @@ class _CameraScreenState extends State<CameraScreen> {
                     FutureBuilder<PackageInfo>(
                       future: PackageInfo.fromPlatform(),
                       builder: (context, snapshot) {
-                        // Always show version, even if PackageInfo fails
                         final version = snapshot.hasData
                             ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
-                            : 'v1.1.7 (9) • Web';
+                            : 'Loading...';
                         return Text(
                           version,
                           style: const TextStyle(

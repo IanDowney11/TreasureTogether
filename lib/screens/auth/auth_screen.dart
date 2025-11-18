@@ -79,18 +79,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           FutureBuilder<PackageInfo>(
                             future: PackageInfo.fromPlatform(),
                             builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return Text(
-                                  'v1.1.7 (9) • Web',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 14,
-                                  ),
-                                );
-                              }
-                              final info = snapshot.data!;
+                              final versionText = snapshot.hasData
+                                  ? 'v${snapshot.data!.version} (${snapshot.data!.buildNumber})${kIsWeb ? ' • Web' : ''}'
+                                  : 'Loading...';
                               return Text(
-                                'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
+                                versionText,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: Colors.white.withOpacity(0.9),
                                   fontSize: 14,
