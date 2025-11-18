@@ -11,6 +11,7 @@ import 'services/sync_service.dart';
 import 'services/preferences_service.dart';
 import 'screens/auth/auth_screen.dart';
 import 'screens/camera/camera_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,10 +42,9 @@ class PhotoSharingApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'TreasureTogether',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
         home: const AuthWrapper(),
         debugShowCheckedModeBanner: false,
       ),

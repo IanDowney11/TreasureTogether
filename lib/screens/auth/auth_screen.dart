@@ -23,65 +23,96 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: Text(_isSignUp ? 'Sign Up' : 'Sign In'),
-        centerTitle: true,
-      ),
-      body: Consumer<AuthService>(
-        builder: (context, authService, _) {
-          if (authService.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+            ],
+          ),
+        ),
+        child: Consumer<AuthService>(
+          builder: (context, authService, _) {
+            if (authService.isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            }
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - 32,
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.camera_alt,
-                          size: 80,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'TreasureTogether',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+            return SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 48,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Logo Section
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 60,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        FutureBuilder<PackageInfo>(
-                          future: PackageInfo.fromPlatform(),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
+                          const SizedBox(height: 24),
+                          Text(
+                            'TreasureTogether',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FutureBuilder<PackageInfo>(
+                            future: PackageInfo.fromPlatform(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return Text(
+                                  'v1.1.7 (9) • Web',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                  ),
+                                );
+                              }
+                              final info = snapshot.data!;
                               return Text(
-                                'v1.1.6 (8) • Web',
+                                'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
+                                  color: Colors.white.withOpacity(0.9),
                                   fontSize: 14,
                                 ),
                               );
-                            }
-                            final info = snapshot.data!;
-                            return Text(
-                              'v${info.version} (${info.buildNumber})${kIsWeb ? ' • Web' : ''}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 32),
+                            },
+                          ),
+                          const SizedBox(height: 40),
+                          // Floating Card with Form
+                          Card(
+                            elevation: 8,
+                            shadowColor: Colors.black.withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
                         if (_isSignUp)
                           TextFormField(
                             controller: _displayNameController,
@@ -166,49 +197,58 @@ class _AuthScreenState extends State<AuthScreen> {
                               ? 'Already have an account? Sign In'
                               : "Don't have an account? Sign Up"),
                         ),
-                        const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.android, color: Colors.green.shade700, size: 20),
-                              const SizedBox(width: 8),
-                              TextButton(
-                                onPressed: () {
-                                  final url = 'https://github.com/IanDowney11/TreasureTogether/releases/latest';
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Download APK from: $url'),
-                                      duration: const Duration(seconds: 5),
-                                      action: SnackBarAction(
-                                        label: 'Copy',
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: url));
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: const Text('Download Android App (APK)'),
+                                  ],
+                                ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
+                          const SizedBox(height: 24),
+                          // APK Download Section (outside the card)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.android, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () {
+                                    final url = 'https://github.com/IanDowney11/TreasureTogether/releases/latest';
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Download APK from: $url'),
+                                        duration: const Duration(seconds: 5),
+                                        action: SnackBarAction(
+                                          label: 'Copy',
+                                          onPressed: () {
+                                            Clipboard.setData(ClipboardData(text: url));
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Download Android App (APK)'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
