@@ -102,19 +102,34 @@ class PhotoService extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
+      // Add timeout to prevent hanging on slow/no connection
       final response = await _supabase
           .from('photos')
           .select()
           .eq('group_id', groupId)
           .eq('is_deleted', false)
-          .order('uploaded_at', ascending: false);
+          .order('uploaded_at', ascending: false)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Request timed out - check your connection');
+            },
+          );
 
       _photosByGroup[groupId] = (response as List)
           .map((json) => Photo.fromJson(json))
           .toList();
+      _error = null; // Clear error on success
     } catch (e) {
-      _error = 'Failed to fetch photos: $e';
-      _photosByGroup[groupId] = [];
+      // Keep existing cached photos on error, don't clear them
+      // This allows the app to work offline with previously loaded photos
+      print('Failed to fetch photos: $e');
+      _error = 'Could not refresh photos. Showing cached data.';
+
+      // Only initialize empty list if we have no cache at all
+      if (_photosByGroup[groupId] == null) {
+        _photosByGroup[groupId] = [];
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -23,7 +23,18 @@
       "Bash(\"/c/Development/flutter/bin/flutter\" build web --release --web-renderer canvaskit)",
       "Bash(\"/c/Development/flutter/bin/flutter\" build web --release)",
       "Bash(\"/c/Development/flutter/bin/dart\" format \"lib/screens/auth/auth_screen.dart\")",
-      "Bash(\"/c/Development/flutter/bin/flutter\" build apk --release)"
+      "Bash(\"/c/Development/flutter/bin/flutter\" build apk --release)",
+      "Bash(\"/c/Development/flutter/bin/flutter\" run -d chrome --web-port 8080)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" build web)",
+      "Bash(python -m http.server:*)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" run -d chrome --web-port 8080)",
+      "Bash(git tag:*)",
+      "Bash(gh run list:*)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" pub get)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" build web --release)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" create --platforms=android .)",
+      "Bash(cat:*)",
+      "Bash(\"C:\\Development\\flutter\\bin\\flutter\" build apk --release)"
     ],
     "deny": [],
     "ask": []

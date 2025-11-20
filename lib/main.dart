@@ -21,6 +21,8 @@ void main() async {
     anonKey: SupabaseConfig.anonKey,
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
+      // Auto-refresh tokens before expiry to keep session alive
+      autoRefreshToken: true,
     ),
   );
 

@@ -244,16 +244,74 @@ class _AuthScreenState extends State<AuthScreen> {
     final authService = context.read<AuthService>();
 
     if (_isSignUp) {
-      await authService.signUp(
+      final success = await authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _displayNameController.text.trim(),
       );
+
+      if (mounted) {
+        if (success) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Account created successfully! Check your email to confirm your account.',
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
+            ),
+          );
+
+          // Clear the form
+          _emailController.clear();
+          _passwordController.clear();
+          _displayNameController.clear();
+
+          // Switch to sign in mode after a delay
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                _isSignUp = false;
+              });
+            }
+          });
+        } else {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                authService.error ?? 'Sign up failed. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
     } else {
-      await authService.signIn(
+      final success = await authService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      if (mounted && !success) {
+        // Show error message for sign in
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authService.error ?? 'Sign in failed. Please try again.',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 

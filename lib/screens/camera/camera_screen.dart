@@ -224,16 +224,33 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                           const SizedBox(height: 32),
                         ],
-                        ElevatedButton.icon(
-                          onPressed: _isUploading ? null : _takePhoto,
-                          icon: const Icon(Icons.camera),
-                          label: Text(_isUploading ? 'Uploading...' : 'Take Photo'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _isUploading ? null : _takePhoto,
+                              icon: const Icon(Icons.camera),
+                              label: const Text('Camera'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 16),
+                            ElevatedButton.icon(
+                              onPressed: _isUploading ? null : _pickFromGallery,
+                              icon: const Icon(Icons.photo_library),
+                              label: const Text('Gallery'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         if (_isUploading)
                           const Padding(
@@ -452,8 +469,11 @@ class _CameraScreenState extends State<CameraScreen> {
         );
 
         if (mounted) {
-          // Close progress dialog
-          Navigator.of(context).pop();
+          // Close progress dialog using root navigator
+          Navigator.of(context, rootNavigator: true).pop();
+
+          // Refresh the photo list to show the new photo
+          await photoService.fetchGroupPhotos(eventId);
 
           String message;
           Color backgroundColor;
@@ -472,17 +492,133 @@ class _CameraScreenState extends State<CameraScreen> {
             backgroundColor = Colors.red;
           }
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: backgroundColor,
-              duration: const Duration(seconds: 4),
-            ),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: backgroundColor,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
         }
       } else if (mounted) {
         // Close progress dialog
-        Navigator.of(context).pop();
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        // Close progress dialog if open
+        Navigator.of(context, rootNavigator: true).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      // Pick multiple images/videos from gallery
+      final List<XFile> files = await _picker.pickMultipleMedia(
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (files.isEmpty) return;
+
+      if (!mounted) return;
+
+      // Show progress dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Uploading ${files.length} file${files.length > 1 ? 's' : ''}...'),
+            ],
+          ),
+        ),
+      );
+
+      setState(() => _isUploading = true);
+
+      // Upload to default event
+      final prefs = context.read<PreferencesService>();
+      final eventId = prefs.defaultEventId;
+
+      if (eventId != null && mounted) {
+        final photoService = context.read<PhotoService>();
+        int successCount = 0;
+        int failCount = 0;
+
+        for (final file in files) {
+          try {
+            final fileBytes = await file.readAsBytes();
+            final photo = await photoService.uploadPhoto(
+              groupId: eventId,
+              imageBytes: fileBytes,
+              fileName: file.name,
+            );
+
+            if (photo != null) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          } catch (e) {
+            print('Error uploading file ${file.name}: $e');
+            failCount++;
+          }
+        }
+
+        if (mounted) {
+          // Close progress dialog using root navigator
+          Navigator.of(context, rootNavigator: true).pop();
+
+          // Refresh the photo list to show the new photos
+          await photoService.fetchGroupPhotos(eventId);
+
+          String message;
+          Color backgroundColor;
+
+          if (successCount == files.length) {
+            message = '$successCount file${successCount > 1 ? 's' : ''} uploaded successfully!';
+            backgroundColor = Colors.green;
+          } else if (successCount > 0) {
+            message = '$successCount uploaded, $failCount failed';
+            backgroundColor = Colors.orange;
+          } else {
+            message = 'Failed to upload files';
+            backgroundColor = Colors.red;
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: backgroundColor,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      } else if (mounted) {
+        // Close progress dialog
+        Navigator.of(context, rootNavigator: true).pop();
       }
     } catch (e) {
       if (mounted) {
