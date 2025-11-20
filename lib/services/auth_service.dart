@@ -178,12 +178,53 @@ class AuthService extends ChangeNotifier {
 
       await _supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: 'treasuretogether://reset-password',
+        redirectTo: 'https://treasuretogether.com',
       );
 
       return true;
     } catch (e) {
-      _error = e.toString();
+      // Handle specific error types
+      final errorMsg = e.toString().toLowerCase();
+
+      if (errorMsg.contains('429') || errorMsg.contains('rate limit')) {
+        _error = 'Too many password reset requests. Please wait a few minutes and try again.';
+      } else if (errorMsg.contains('invalid email') || errorMsg.contains('not found')) {
+        _error = 'No account found with this email address.';
+      } else if (errorMsg.contains('network')) {
+        _error = 'Network error. Please check your internet connection and try again.';
+      } else {
+        _error = 'Failed to send password reset email. Please try again later.';
+      }
+
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updatePassword(String newPassword) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+
+      return true;
+    } catch (e) {
+      final errorMsg = e.toString().toLowerCase();
+
+      if (errorMsg.contains('weak password')) {
+        _error = 'Password is too weak. Please use a stronger password.';
+      } else if (errorMsg.contains('invalid') || errorMsg.contains('expired')) {
+        _error = 'Reset link has expired. Please request a new one.';
+      } else {
+        _error = 'Failed to update password. Please try again.';
+      }
+
       return false;
     } finally {
       _isLoading = false;

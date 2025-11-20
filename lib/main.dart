@@ -9,6 +9,7 @@ import 'services/group_service.dart';
 import 'services/sync_service.dart';
 import 'services/preferences_service.dart';
 import 'screens/auth/auth_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/camera/camera_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -53,11 +54,55 @@ class PhotoSharingApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isPasswordRecovery = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForPasswordRecovery();
+
+    // Listen for auth state changes
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.passwordRecovery) {
+        setState(() {
+          _isPasswordRecovery = true;
+        });
+      } else if (event == AuthChangeEvent.signedOut) {
+        setState(() {
+          _isPasswordRecovery = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _checkForPasswordRecovery() async {
+    // Check if we're coming from a password recovery link
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      // Check if this is a recovery session by looking at the URL
+      // Supabase automatically handles the token exchange
+      setState(() {
+        _isPasswordRecovery = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // If password recovery mode, show reset password screen
+    if (_isPasswordRecovery) {
+      return const ResetPasswordScreen();
+    }
+
     return Consumer<AuthService>(
       builder: (context, authService, _) {
         if (authService.isLoading) {
