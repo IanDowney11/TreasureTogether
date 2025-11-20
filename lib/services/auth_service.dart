@@ -75,16 +75,40 @@ class AuthService extends ChangeNotifier {
         email: email,
         password: password,
         data: {'display_name': displayName},
+        emailRedirectTo: 'https://treasuretogether.com',
       );
 
       if (response.user != null) {
+        // Check if email confirmation is required
+        final session = response.session;
+        final emailConfirmedAt = response.user?.emailConfirmedAt;
+
+        if (session == null && emailConfirmedAt == null) {
+          // Email confirmation required - user created but not confirmed
+          _error = 'Please check your email to confirm your account before signing in.';
+          return true; // Still return true because account was created
+        } else if (emailConfirmedAt != null) {
+          return true;
+        } else if (session != null) {
+          return true;
+        }
         return true;
       } else {
-        _error = 'Sign up failed';
+        _error = 'Sign up failed. Please try again.';
         return false;
       }
     } catch (e) {
-      _error = e.toString();
+      // Better error messages
+      final errorMsg = e.toString().toLowerCase();
+      if (errorMsg.contains('already registered') || errorMsg.contains('already exists')) {
+        _error = 'This email is already registered. Try signing in instead.';
+      } else if (errorMsg.contains('invalid email')) {
+        _error = 'Please enter a valid email address.';
+      } else if (errorMsg.contains('password')) {
+        _error = 'Password must be at least 6 characters long.';
+      } else {
+        _error = 'Sign up failed: ${e.toString()}';
+      }
       return false;
     } finally {
       _isLoading = false;
@@ -113,13 +137,18 @@ class AuthService extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      // Check if it's an invalid credentials error
+      // Check for specific error types
       final errorMessage = e.toString().toLowerCase();
-      if (errorMessage.contains('invalid') ||
+      if (errorMessage.contains('email not confirmed') ||
+          errorMessage.contains('email confirmation')) {
+        _error = 'Please confirm your email address before signing in. Check your inbox for the confirmation link.';
+      } else if (errorMessage.contains('invalid') ||
           errorMessage.contains('credentials') ||
           errorMessage.contains('wrong') ||
           errorMessage.contains('incorrect')) {
-        _error = "Doh!  That's not it.  Sure you have an account brah???";
+        _error = "Doh! That's not it. Wrong email or password?";
+      } else if (errorMessage.contains('not found') || errorMessage.contains('user not found')) {
+        _error = 'No account found with this email. Try signing up first!';
       } else {
         _error = e.toString();
       }

@@ -9,7 +9,6 @@ import '../../services/auth_service.dart';
 import '../../services/group_service.dart';
 import '../../services/photo_service.dart';
 import '../../services/preferences_service.dart';
-import '../../models/group.dart';
 import '../../version.dart';
 import '../groups/groups_screen.dart';
 import '../gallery/gallery_screen.dart';
@@ -451,7 +450,7 @@ class _CameraScreenState extends State<CameraScreen> {
           await Gal.putImageBytes(imageBytes);
           savedToGallery = true;
         } catch (e) {
-          print('Error saving to gallery: $e');
+          debugPrint('Error saving to gallery: $e');
           savedToGallery = false;
         }
       }
@@ -580,7 +579,7 @@ class _CameraScreenState extends State<CameraScreen> {
               failCount++;
             }
           } catch (e) {
-            print('Error uploading file ${file.name}: $e');
+            debugPrint('Error uploading file ${file.name}: $e');
             failCount++;
           }
         }

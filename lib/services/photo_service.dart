@@ -7,7 +7,7 @@ class PhotoService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   static const String bucketName = 'photos';
 
-  Map<String, List<Photo>> _photosByGroup = {};
+  final Map<String, List<Photo>> _photosByGroup = {};
   bool _isLoading = false;
   String? _error;
   double _uploadProgress = 0.0;
@@ -123,7 +123,7 @@ class PhotoService extends ChangeNotifier {
     } catch (e) {
       // Keep existing cached photos on error, don't clear them
       // This allows the app to work offline with previously loaded photos
-      print('Failed to fetch photos: $e');
+      debugPrint('Failed to fetch photos: $e');
       _error = 'Could not refresh photos. Showing cached data.';
 
       // Only initialize empty list if we have no cache at all
@@ -166,7 +166,7 @@ class PhotoService extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      print('Attempting to delete photo: $photoId');
+      debugPrint('Attempting to delete photo: $photoId');
 
       // Add timeout to prevent hanging
       await _supabase
@@ -181,7 +181,7 @@ class PhotoService extends ChangeNotifier {
             },
           );
 
-      print('Photo deleted successfully: $photoId');
+      debugPrint('Photo deleted successfully: $photoId');
 
       // Remove from local cache
       for (var groupPhotos in _photosByGroup.values) {
@@ -191,7 +191,7 @@ class PhotoService extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('Error deleting photo: $e');
+      debugPrint('Error deleting photo: $e');
       _error = 'Failed to delete photo: ${e.toString()}';
       return false;
     } finally {

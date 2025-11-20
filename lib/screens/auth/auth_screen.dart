@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
 import '../../version.dart';
 
@@ -202,20 +202,31 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const Icon(Icons.android, color: Colors.white, size: 20),
                                 const SizedBox(width: 8),
                                 TextButton(
-                                  onPressed: () {
-                                    final url = 'https://github.com/IanDowney11/TreasureTogether/releases/latest';
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Download APK from: $url'),
-                                        duration: const Duration(seconds: 5),
-                                        action: SnackBarAction(
-                                          label: 'Copy',
-                                          onPressed: () {
-                                            Clipboard.setData(ClipboardData(text: url));
-                                          },
-                                        ),
-                                      ),
-                                    );
+                                  onPressed: () async {
+                                    final url = Uri.parse('https://github.com/IanDowney11/TreasureTogether/releases/latest');
+                                    try {
+                                      if (await canLaunchUrl(url)) {
+                                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                                      } else {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Could not open link: ${url.toString()}'),
+                                              duration: const Duration(seconds: 3),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error opening link: $e'),
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.white,
@@ -252,21 +263,42 @@ class _AuthScreenState extends State<AuthScreen> {
 
       if (mounted) {
         if (success) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Account created successfully! Check your email to confirm your account.',
+          // Check if email confirmation is required
+          final errorMsg = authService.error;
+          final needsConfirmation = errorMsg != null &&
+              errorMsg.toLowerCase().contains('check your email');
+
+          if (needsConfirmation) {
+            // Show orange warning about email confirmation
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMsg),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 8),
+                action: SnackBarAction(
+                  label: 'OK',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                ),
               ),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 5),
-              action: SnackBarAction(
-                label: 'OK',
-                textColor: Colors.white,
-                onPressed: () {},
+            );
+          } else {
+            // Show success message
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Account created successfully! You can now sign in.',
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'OK',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                ),
               ),
-            ),
-          );
+            );
+          }
 
           // Clear the form
           _emailController.clear();
