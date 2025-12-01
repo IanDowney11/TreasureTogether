@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'package:gal/gal.dart';
+import 'package:video_player/video_player.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/group.dart';
 import '../../models/photo.dart';
 import '../../services/auth_service.dart';
@@ -227,11 +230,19 @@ class _GalleryScreenState extends State<GalleryScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.videocam),
+              title: const Text('Record Video'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickAndUploadVideo(ImageSource.camera);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Choose from Gallery'),
               onTap: () {
                 Navigator.pop(context);
-                _pickAndUploadPhoto(ImageSource.gallery);
+                _pickAndUploadMultiple();
               },
             ),
           ],
@@ -354,6 +365,152 @@ class _GalleryScreenState extends State<GalleryScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _pickAndUploadVideo(ImageSource source) async {
+    try {
+      final XFile? video = await _picker.pickVideo(
+        source: source,
+        maxDuration: const Duration(minutes: 5),
+      );
+
+      if (video == null) return;
+
+      if (!mounted) return;
+
+      // Show upload dialog with loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Uploading video...'),
+            ],
+          ),
+        ),
+      );
+
+      final videoBytes = await video.readAsBytes();
+      final photoService = context.read<PhotoService>();
+
+      final photo = await photoService.uploadPhoto(
+        groupId: widget.group.id,
+        imageBytes: videoBytes,
+        fileName: video.name,
+      );
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              photo != null
+                  ? 'Video uploaded successfully!'
+                  : photoService.error ?? 'Failed to upload video',
+            ),
+            backgroundColor: photo != null ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick video: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadMultiple() async {
+    try {
+      final List<XFile> files = await _picker.pickMultipleMedia(
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (files.isEmpty) return;
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Uploading ${files.length} file${files.length > 1 ? 's' : ''}...'),
+            ],
+          ),
+        ),
+      );
+
+      final photoService = context.read<PhotoService>();
+      int successCount = 0;
+      int failCount = 0;
+
+      for (final file in files) {
+        try {
+          final fileBytes = await file.readAsBytes();
+          final photo = await photoService.uploadPhoto(
+            groupId: widget.group.id,
+            imageBytes: fileBytes,
+            fileName: file.name,
+          );
+
+          if (photo != null) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (e) {
+          debugPrint('Error uploading file ${file.name}: $e');
+          failCount++;
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+
+        String message;
+        Color backgroundColor;
+
+        if (successCount == files.length) {
+          message = '$successCount file${successCount > 1 ? 's' : ''} uploaded successfully!';
+          backgroundColor = Colors.green;
+        } else if (successCount > 0) {
+          message = '$successCount uploaded, $failCount failed';
+          backgroundColor = Colors.orange;
+        } else {
+          message = 'Failed to upload files';
+          backgroundColor = Colors.red;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: backgroundColor,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick media: $e')),
+        );
+      }
+    }
   }
 
   void _showPhotoViewer(List<Photo> photos, int initialIndex) {
@@ -592,22 +749,55 @@ class _PhotoThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final photoService = context.read<PhotoService>();
     final url = photoService.getPhotoUrl(photo);
+    final isVideo = photoService.isVideo(photo);
 
     return GestureDetector(
       onTap: onTap,
-      child: CachedNetworkImage(
-        imageUrl: url,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: Colors.grey[300],
-          child: const Center(
-            child: CircularProgressIndicator(strokeWidth: 2),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: url,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Colors.grey[300],
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[300],
+              child: Icon(isVideo ? Icons.videocam : Icons.error),
+            ),
           ),
-        ),
-        errorWidget: (context, url, error) => Container(
-          color: Colors.grey[300],
-          child: const Icon(Icons.error),
-        ),
+          if (isVideo)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.5),
+                  ],
+                ),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 40,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 3.0,
+                      color: Colors.black,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -774,22 +964,15 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
         },
         itemBuilder: (context, index) {
           final photo = widget.photos[index];
-          final url = photoService.getPhotoUrl(photo);
+          final isVideo = photoService.isVideo(photo);
 
           return Column(
             children: [
               Expanded(
                 child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.contain,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    errorWidget: (context, url, error) => const Center(
-                      child: Icon(Icons.error, color: Colors.white),
-                    ),
-                  ),
+                  child: isVideo
+                      ? _VideoPlayerWidget(photo: photo)
+                      : _ImageViewerWidget(photo: photo),
                 ),
               ),
               if (photo.caption != null)
@@ -915,16 +1098,17 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
     try {
       final photoService = context.read<PhotoService>();
       final url = photoService.getPhotoUrl(photo);
+      final isVideo = photoService.isVideo(photo);
 
       if (kIsWeb) {
         // For web, copy URL to clipboard (dart:html causes build issues on mobile)
         await Clipboard.setData(ClipboardData(text: url));
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo URL copied! Open in new tab to download.'),
+          SnackBar(
+            content: Text('${isVideo ? 'Video' : 'Photo'} URL copied! Open in new tab to download.'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 4),
+            duration: const Duration(seconds: 4),
           ),
         );
       } else {
@@ -938,12 +1122,21 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
 
         final response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {
-          await Gal.putImageBytes(response.bodyBytes);
+          if (isVideo) {
+            // For videos, we need to save to a temp file first, then use Gal.putVideo
+            final tempDir = await getTemporaryDirectory();
+            final tempFile = File('${tempDir.path}/temp_video.mp4');
+            await tempFile.writeAsBytes(response.bodyBytes);
+            await Gal.putVideo(tempFile.path);
+            await tempFile.delete(); // Clean up temp file
+          } else {
+            await Gal.putImageBytes(response.bodyBytes);
+          }
 
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Photo saved to gallery!'),
+              SnackBar(
+                content: Text('${isVideo ? 'Video' : 'Photo'} saved to gallery!'),
                 backgroundColor: Colors.green,
               ),
             );
@@ -951,8 +1144,8 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
         } else {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to download photo'),
+              SnackBar(
+                content: Text('Failed to download ${isVideo ? 'video' : 'photo'}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -963,7 +1156,7 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error downloading photo: $e'),
+            content: Text('Error downloading: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1049,6 +1242,161 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ImageViewerWidget extends StatelessWidget {
+  final Photo photo;
+
+  const _ImageViewerWidget({required this.photo});
+
+  @override
+  Widget build(BuildContext context) {
+    final photoService = context.read<PhotoService>();
+    final url = photoService.getPhotoUrl(photo);
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.contain,
+      placeholder: (context, url) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      errorWidget: (context, url, error) => const Center(
+        child: Icon(Icons.error, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _VideoPlayerWidget extends StatefulWidget {
+  final Photo photo;
+
+  const _VideoPlayerWidget({required this.photo});
+
+  @override
+  State<_VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      final photoService = context.read<PhotoService>();
+      final url = photoService.getPhotoUrl(widget.photo);
+
+      _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      await _controller.initialize();
+      _controller.setLooping(true);
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error initializing video: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error, color: Colors.white, size: 48),
+            SizedBox(height: 16),
+            Text(
+              'Failed to load video',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: VideoPlayer(_controller),
+        ),
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: VideoProgressIndicator(
+            _controller,
+            allowScrubbing: true,
+            colors: const VideoProgressColors(
+              playedColor: Colors.blue,
+              bufferedColor: Colors.grey,
+              backgroundColor: Colors.white24,
+            ),
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              if (_controller.value.isPlaying) {
+                _controller.pause();
+              } else {
+                _controller.play();
+              }
+            });
+          },
+          child: Container(
+            color: Colors.transparent,
+            child: Center(
+              child: AnimatedOpacity(
+                opacity: _controller.value.isPlaying ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 300),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.white,
+                    size: 64,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

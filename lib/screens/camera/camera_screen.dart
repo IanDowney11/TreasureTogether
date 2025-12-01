@@ -23,7 +23,7 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   final ImagePicker _picker = ImagePicker();
-  bool _isUploading = false;
+  int _uploadingCount = 0;
   bool _hasAutoLaunched = false;
 
   @override
@@ -223,25 +223,42 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                           const SizedBox(height: 32),
                         ],
-                        Row(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            ElevatedButton.icon(
-                              onPressed: _isUploading ? null : _takePhoto,
-                              icon: const Icon(Icons.camera),
-                              label: const Text('Camera'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 16,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _takePhoto,
+                                  icon: const Icon(Icons.camera),
+                                  label: const Text('Photo'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 16),
+                                ElevatedButton.icon(
+                                  onPressed: _recordVideo,
+                                  icon: const Icon(Icons.videocam),
+                                  label: const Text('Video'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(height: 12),
                             ElevatedButton.icon(
-                              onPressed: _isUploading ? null : _pickFromGallery,
+                              onPressed: _pickFromGallery,
                               icon: const Icon(Icons.photo_library),
-                              label: const Text('Gallery'),
+                              label: const Text('Choose from Gallery'),
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
@@ -251,10 +268,27 @@ class _CameraScreenState extends State<CameraScreen> {
                             ),
                           ],
                         ),
-                        if (_isUploading)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 16),
-                            child: CircularProgressIndicator(),
+                        if (_uploadingCount > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Uploading $_uploadingCount ${_uploadingCount == 1 ? 'file' : 'files'}...',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                       ],
                     );
@@ -392,21 +426,15 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _takePhoto() async {
     try {
       // Request storage permission on Android before saving (only needed for Android 9 and below)
-      // On Android 10+ (API 29+), MediaStore doesn't require runtime permissions
       if (!kIsWeb) {
-        // Try to request storage permission
-        // On Android 10+ this will be granted automatically or not needed
-        // On Android 9 and below, this prompts for WRITE_EXTERNAL_STORAGE
         final status = await Permission.storage.request();
         if (!status.isGranted && !status.isLimited) {
-          // Permission denied - but we'll continue anyway
-          // The photo will still be uploaded to the cloud
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Storage permission denied - photo will be uploaded but not saved to device'),
                 backgroundColor: Colors.orange,
-                duration: Duration(seconds: 4),
+                duration: Duration(seconds: 2),
               ),
             );
           }
@@ -421,29 +449,12 @@ class _CameraScreenState extends State<CameraScreen> {
       );
 
       if (image == null) return;
-
       if (!mounted) return;
 
-      // Show progress dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Saving and uploading photo...'),
-            ],
-          ),
-        ),
-      );
-
-      setState(() => _isUploading = true);
-
-      // Save to device gallery
+      // Read image bytes
       final imageBytes = await image.readAsBytes();
+
+      // Save to device gallery immediately (fast operation)
       bool savedToGallery = false;
       if (!kIsWeb) {
         try {
@@ -451,75 +462,161 @@ class _CameraScreenState extends State<CameraScreen> {
           savedToGallery = true;
         } catch (e) {
           debugPrint('Error saving to gallery: $e');
-          savedToGallery = false;
         }
       }
 
-      // Upload to default event
-      final prefs = context.read<PreferencesService>();
-      final eventId = prefs.defaultEventId;
-
-      if (eventId != null && mounted) {
-        final photoService = context.read<PhotoService>();
-        final photo = await photoService.uploadPhoto(
-          groupId: eventId,
-          imageBytes: imageBytes,
-          fileName: image.name,
+      // Show quick feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(savedToGallery ? 'Photo saved! Uploading...' : 'Uploading photo...'),
+            duration: const Duration(seconds: 1),
+          ),
         );
-
-        if (mounted) {
-          // Close progress dialog using root navigator
-          Navigator.of(context, rootNavigator: true).pop();
-
-          // Refresh the photo list to show the new photo
-          await photoService.fetchGroupPhotos(eventId);
-
-          String message;
-          Color backgroundColor;
-
-          if (photo != null && savedToGallery) {
-            message = 'Photo saved to gallery and uploaded!';
-            backgroundColor = Colors.green;
-          } else if (photo != null && !savedToGallery) {
-            message = 'Photo uploaded! (Gallery save failed - check permissions)';
-            backgroundColor = Colors.orange;
-          } else if (photo == null && savedToGallery) {
-            message = 'Photo saved to gallery, but upload failed';
-            backgroundColor = Colors.orange;
-          } else {
-            message = 'Failed to save and upload photo';
-            backgroundColor = Colors.red;
-          }
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: backgroundColor,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-          }
-        }
-      } else if (mounted) {
-        // Close progress dialog
-        Navigator.of(context, rootNavigator: true).pop();
       }
+
+      // Start background upload
+      _uploadInBackground(imageBytes, image.name, savedToGallery);
     } catch (e) {
       if (mounted) {
-        // Close progress dialog if open
-        Navigator.of(context, rootNavigator: true).pop();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _uploadInBackground(Uint8List fileBytes, String fileName, bool savedToGallery) async {
+    // Increment upload counter
+    if (mounted) {
+      setState(() => _uploadingCount++);
+    }
+
+    try {
+      final prefs = context.read<PreferencesService>();
+      final eventId = prefs.defaultEventId;
+
+      if (eventId != null) {
+        final photoService = context.read<PhotoService>();
+        final photo = await photoService.uploadPhoto(
+          groupId: eventId,
+          imageBytes: fileBytes,
+          fileName: fileName,
+        );
+
+        if (mounted) {
+          // Refresh the photo list to show the new photo
+          await photoService.fetchGroupPhotos(eventId);
+
+          // Show completion feedback
+          String message;
+          Color backgroundColor;
+
+          if (photo != null && savedToGallery) {
+            message = 'Photo uploaded successfully!';
+            backgroundColor = Colors.green;
+          } else if (photo != null && !savedToGallery) {
+            message = 'Photo uploaded! (Gallery save failed)';
+            backgroundColor = Colors.orange;
+          } else {
+            message = 'Upload failed';
+            backgroundColor = Colors.red;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: backgroundColor,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Background upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } finally {
+      // Decrement upload counter
       if (mounted) {
-        setState(() => _isUploading = false);
+        setState(() => _uploadingCount--);
+      }
+    }
+  }
+
+  Future<void> _recordVideo() async {
+    try {
+      // Request storage permission on Android before saving
+      if (!kIsWeb) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted && !status.isLimited) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Storage permission denied - video will be uploaded but not saved to device'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      }
+
+      final XFile? video = await _picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: const Duration(minutes: 5),
+      );
+
+      if (video == null) return;
+      if (!mounted) return;
+
+      // Read video bytes
+      final videoBytes = await video.readAsBytes();
+
+      // Save to device gallery immediately (fast operation)
+      bool savedToGallery = false;
+      if (!kIsWeb) {
+        try {
+          // Gal.putVideo requires a file path, not bytes
+          await Gal.putVideo(video.path);
+          savedToGallery = true;
+        } catch (e) {
+          debugPrint('Error saving to gallery: $e');
+        }
+      }
+
+      // Show quick feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(savedToGallery ? 'Video saved! Uploading...' : 'Uploading video...'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // Start background upload
+      _uploadInBackground(videoBytes, video.name, savedToGallery);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -534,106 +631,30 @@ class _CameraScreenState extends State<CameraScreen> {
       );
 
       if (files.isEmpty) return;
-
       if (!mounted) return;
 
-      // Show progress dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Uploading ${files.length} file${files.length > 1 ? 's' : ''}...'),
-            ],
-          ),
+      // Show quick feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Uploading ${files.length} file${files.length > 1 ? 's' : ''}...'),
+          duration: const Duration(seconds: 1),
         ),
       );
 
-      setState(() => _isUploading = true);
-
-      // Upload to default event
-      final prefs = context.read<PreferencesService>();
-      final eventId = prefs.defaultEventId;
-
-      if (eventId != null && mounted) {
-        final photoService = context.read<PhotoService>();
-        int successCount = 0;
-        int failCount = 0;
-
-        for (final file in files) {
-          try {
-            final fileBytes = await file.readAsBytes();
-            final photo = await photoService.uploadPhoto(
-              groupId: eventId,
-              imageBytes: fileBytes,
-              fileName: file.name,
-            );
-
-            if (photo != null) {
-              successCount++;
-            } else {
-              failCount++;
-            }
-          } catch (e) {
-            debugPrint('Error uploading file ${file.name}: $e');
-            failCount++;
-          }
-        }
-
-        if (mounted) {
-          // Close progress dialog using root navigator
-          Navigator.of(context, rootNavigator: true).pop();
-
-          // Refresh the photo list to show the new photos
-          await photoService.fetchGroupPhotos(eventId);
-
-          String message;
-          Color backgroundColor;
-
-          if (successCount == files.length) {
-            message = '$successCount file${successCount > 1 ? 's' : ''} uploaded successfully!';
-            backgroundColor = Colors.green;
-          } else if (successCount > 0) {
-            message = '$successCount uploaded, $failCount failed';
-            backgroundColor = Colors.orange;
-          } else {
-            message = 'Failed to upload files';
-            backgroundColor = Colors.red;
-          }
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: backgroundColor,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-          }
-        }
-      } else if (mounted) {
-        // Close progress dialog
-        Navigator.of(context, rootNavigator: true).pop();
+      // Start background uploads for all files
+      for (final file in files) {
+        final fileBytes = await file.readAsBytes();
+        _uploadInBackground(fileBytes, file.name, false);
       }
     } catch (e) {
       if (mounted) {
-        // Close progress dialog if open
-        Navigator.of(context, rootNavigator: true).pop();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
       }
     }
   }

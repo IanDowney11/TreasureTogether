@@ -238,9 +238,24 @@ class PhotoService extends ChangeNotifier {
         return 'image/webp';
       case '.heic':
         return 'image/heic';
+      case '.mp4':
+        return 'video/mp4';
+      case '.mov':
+        return 'video/quicktime';
+      case '.avi':
+        return 'video/x-msvideo';
+      case '.mkv':
+        return 'video/x-matroska';
+      case '.webm':
+        return 'video/webm';
       default:
         return 'image/jpeg';
     }
+  }
+
+  /// Helper to check if a photo is actually a video based on mime type
+  bool isVideo(Photo photo) {
+    return photo.mimeType?.startsWith('video/') ?? false;
   }
 
   /// Add photo to favorites
