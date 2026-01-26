@@ -67,7 +67,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkForPasswordRecovery();
 
     // Listen for auth state changes
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
@@ -82,18 +81,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
       }
     });
-  }
-
-  Future<void> _checkForPasswordRecovery() async {
-    // Check if we're coming from a password recovery link
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      // Check if this is a recovery session by looking at the URL
-      // Supabase automatically handles the token exchange
-      setState(() {
-        _isPasswordRecovery = true;
-      });
-    }
   }
 
   @override
